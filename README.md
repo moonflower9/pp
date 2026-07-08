@@ -1,4 +1,4 @@
-# pp
+# pparse
 
 A CLI PNG image parser written in Rust.
 
@@ -15,8 +15,8 @@ pacman -S rustup
 Clone the repository:
 
 ```
-git clone https://github.com/moonflower9/pp.git
-cd pp
+git clone https://github.com/moonflower9/pparse.git
+cd pparse
 ```
 
 Then build and run:
