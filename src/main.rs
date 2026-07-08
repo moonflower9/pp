@@ -1,4 +1,4 @@
-use pp::parse_bytes;
+use pparsearse::parse_bytes;
 
 fn main() {
     let mut debug = false;
@@ -9,7 +9,7 @@ fn main() {
             "--debug" | "-d" => debug = true,
             _ if path.is_none() => path = Some(arg),
             _ => {
-                eprintln!("usage: pp [--debug|-d] <path>");
+                eprintln!("usage: pparse [--debug|-d] <path>");
                 std::process::exit(2);
             }
         }
@@ -18,7 +18,7 @@ fn main() {
     let path = match path {
         Some(path) => path,
         None => {
-            eprintln!("usage: pp [--debug|-d] <path>");
+            eprintln!("usage: pparse [--debug|-d] <path>");
             std::process::exit(2);
         }
     };
