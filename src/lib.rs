@@ -4,6 +4,7 @@ const SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 pub enum PngError {
     BadSignature,
     UnexpectedEof,
+    InvalidIhdr,
 }
 
 pub struct Chunk {
@@ -13,7 +14,22 @@ pub struct Chunk {
     crc: u32,
 }
 
-pub fn parse_bytes(bytes: &[u8], debug: bool) -> Result<Vec<Chunk>, PngError> {
+pub struct PngImage {
+    pub ihdr: Ihdr,
+    idat_data: Vec<u8>,
+}
+
+pub struct Ihdr {
+    pub width: u32,
+    pub height: u32,
+    bit_depth: u8,
+    color_type: u8,
+    compression: u8,
+    filter: u8,
+    interlace: u8,
+}
+
+pub fn parse_bytes(bytes: &[u8], debug: bool) -> Result<PngImage, PngError> {
     if debug {
         println!("read {} bytes", bytes.len());
     }
@@ -26,10 +42,11 @@ pub fn parse_bytes(bytes: &[u8], debug: bool) -> Result<Vec<Chunk>, PngError> {
         println!("sig match");
     }
 
-    parse_chunks(&bytes[8..], debug)
+    let chunks = parse_chunks(&bytes[8..], debug)?;
+    interpret_chunks(&chunks, debug)
 }
 
-pub fn parse_chunks(bytes: &[u8], debug: bool) -> Result<Vec<Chunk>, PngError> {
+fn parse_chunks(bytes: &[u8], debug: bool) -> Result<Vec<Chunk>, PngError> {
     let mut chunks = Vec::new();
     let mut offset = 0;
 
@@ -75,4 +92,42 @@ pub fn parse_chunks(bytes: &[u8], debug: bool) -> Result<Vec<Chunk>, PngError> {
     }
 
     Ok(chunks)
+}
+
+fn parse_ihdr(data: &[u8]) -> Result<Ihdr, PngError> {
+    if data.len() != 13 {
+        return Err(PngError::InvalidIhdr);
+    }
+
+    Ok(Ihdr {
+        width: u32::from_be_bytes(data[0..4].try_into().unwrap()),
+        height: u32::from_be_bytes(data[4..8].try_into().unwrap()),
+        bit_depth: data[8],
+        color_type: data[9],
+        compression: data[10],
+        filter: data[11],
+        interlace: data[12],
+    })
+}
+
+fn interpret_chunks(chunks: &[Chunk], debug: bool) -> Result<PngImage, PngError> {
+    // first chunk MUST be IHDR
+    let ihdr = parse_ihdr(&chunks[0].data)?;
+
+    // collect IDAT data
+    let idat_data: Vec<u8> = chunks
+        .iter()
+        .filter(|c| &c.chunk_type == b"IDAT")
+        .flat_map(|c| c.data.iter().copied())
+        .collect();
+
+    if debug {
+        println!(
+            "IHDR: {}x{} depth={} color_type={}",
+            ihdr.width, ihdr.height, ihdr.bit_depth, ihdr.color_type
+        );
+        println!("IDAT: {} bytes total", idat_data.len());
+    }
+
+    Ok(PngImage { ihdr, idat_data })
 }

@@ -29,11 +29,7 @@ fn main() {
     });
 
     match parse_bytes(&bytes, debug) {
-        Ok(chunks) => {
-            if debug {
-                println!("parsed {} chunks", chunks.len());
-            }
-        }
+        Ok(_) => {}
         Err(e) => {
             eprintln!("parse error: {e:?}");
             std::process::exit(1);
