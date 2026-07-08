@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "pp"
+name = "pparse"
 version = "0.1.0"
