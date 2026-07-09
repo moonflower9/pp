@@ -123,8 +123,14 @@ fn interpret_chunks(chunks: &[Chunk], debug: bool) -> Result<PngImage, PngError>
 
     if debug {
         println!(
-            "IHDR: {}x{} depth={} color_type={}",
-            ihdr.width, ihdr.height, ihdr.bit_depth, ihdr.color_type
+            "IHDR: {}x{} depth={} color_type={} compression={} filter={} interlace={}",
+            ihdr.width,
+            ihdr.height,
+            ihdr.bit_depth,
+            ihdr.color_type,
+            ihdr.compression,
+            ihdr.filter,
+            ihdr.interlace
         );
         println!("IDAT: {} bytes total", idat_data.len());
     }
