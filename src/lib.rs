@@ -1,3 +1,6 @@
+use flate2::read::ZlibDecoder;
+use std::io::Read;
+
 const SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 
 #[derive(Debug)]
@@ -5,6 +8,7 @@ pub enum PngError {
     BadSignature,
     UnexpectedEof,
     InvalidIhdr,
+    DecompressionFailed,
 }
 
 pub struct Chunk {
@@ -17,6 +21,7 @@ pub struct Chunk {
 pub struct PngImage {
     pub ihdr: Ihdr,
     idat_data: Vec<u8>,
+    raw_data: Vec<u8>,
 }
 
 pub struct Ihdr {
@@ -110,16 +115,31 @@ fn parse_ihdr(data: &[u8]) -> Result<Ihdr, PngError> {
     })
 }
 
-fn interpret_chunks(chunks: &[Chunk], debug: bool) -> Result<PngImage, PngError> {
-    // first chunk MUST be IHDR
-    let ihdr = parse_ihdr(&chunks[0].data)?;
+fn decompress_idat(idat_data: &[u8]) -> Result<Vec<u8>, PngError> {
+    let mut decoder = ZlibDecoder::new(idat_data);
+    let mut decompressed = Vec::new();
 
-    // collect IDAT data
-    let idat_data: Vec<u8> = chunks
-        .iter()
-        .filter(|c| &c.chunk_type == b"IDAT")
-        .flat_map(|c| c.data.iter().copied())
-        .collect();
+    decoder.read_to_end(&mut decompressed).map_err(|e| {
+        eprintln!("decompression error: {e:?}");
+        PngError::DecompressionFailed
+    })?;
+
+    Ok(decompressed)
+}
+
+fn unfilter_raw_data(raw_data: &[u8]) -> Result<Vec<u8>, PngError> {
+    todo!()
+}
+
+fn interpret_chunks(chunks: &[Chunk], debug: bool) -> Result<PngImage, PngError> {
+    let first = chunks.first().ok_or(PngError::UnexpectedEof)?;
+
+    if &first.chunk_type != b"IHDR" {
+        return Err(PngError::InvalidIhdr);
+    }
+
+    // first chunk MUST be IHDR
+    let ihdr = parse_ihdr(&first.data)?;
 
     if debug {
         println!(
@@ -132,8 +152,28 @@ fn interpret_chunks(chunks: &[Chunk], debug: bool) -> Result<PngImage, PngError>
             ihdr.filter,
             ihdr.interlace
         );
+    }
+
+    // collect IDAT data
+    let idat_data: Vec<u8> = chunks
+        .iter()
+        .filter(|c| &c.chunk_type == b"IDAT")
+        .flat_map(|c| c.data.iter().copied())
+        .collect();
+
+    if debug {
         println!("IDAT: {} bytes total", idat_data.len());
     }
 
-    Ok(PngImage { ihdr, idat_data })
+    let raw_data = decompress_idat(&idat_data)?;
+
+    if debug {
+        println!("decompressed: {} bytes", raw_data.len());
+    }
+
+    Ok(PngImage {
+        ihdr,
+        idat_data,
+        raw_data,
+    })
 }
