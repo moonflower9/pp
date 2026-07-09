@@ -1,4 +1,4 @@
-use pparse::parse_bytes;
+use pparse::parse_png;
 
 fn main() {
     let mut debug = false;
@@ -28,7 +28,7 @@ fn main() {
         std::process::exit(1);
     });
 
-    match parse_bytes(&bytes, debug) {
+    match parse_png(&bytes, debug) {
         Ok(_) => {}
         Err(e) => {
             eprintln!("parse error: {e:?}");

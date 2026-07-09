@@ -29,7 +29,7 @@ pub struct Ihdr {
     interlace: u8,
 }
 
-pub fn parse_bytes(bytes: &[u8], debug: bool) -> Result<PngImage, PngError> {
+pub fn parse_png(bytes: &[u8], debug: bool) -> Result<PngImage, PngError> {
     if debug {
         println!("read {} bytes", bytes.len());
     }
